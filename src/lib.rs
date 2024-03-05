@@ -1,53 +1,68 @@
 use std::ops::{Add, Sub, Mul, Div};
 use std::f64::consts::PI;
 
-#[derive(Debug)]
-struct Complex64{
-    re: f64,
-    im: f64,
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Complex<T> {
+    re: T,
+    im: T,
 }
 
-impl Add for Complex64 {
-    type Output = Self;
-    fn add(self, rhs: Self) -> <Self as Add>::Output {
-        Self {
-            re: self.re + rhs.re,
-            im: self.im + rhs.im,
-        }
+pub type Complex32 = Complex<f32>;
+pub type Complex64 = Complex<f64>;
+
+impl<T> Complex<T> {
+    pub const fn new(re: T, im: T) -> Self {
+        Complex { re, im }
     }
 }
 
-impl Sub for Complex64 {
+// (a + i b) + (c + i d) == (a + c) + i (b + d)
+impl<T: Add<Output = T>> Add for Complex<T> {
     type Output = Self;
-    fn sub(self, rhs: Self) -> <Self as Sub>::Output {
-        Self {
-            re: self.re - rhs.re,
-            im: self.im - rhs.im,
-        }
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::Output::new(self.re + rhs.re, self.im + rhs.im)
     }
 }
 
-impl Mul for Complex64 {
+// (a + i b) - (c + i d) == (a - c) + i (b - d)
+impl<T: Sub<Output = T>> Sub for Complex<T> 
+{
     type Output = Self;
-    fn mul(self, rhs: Self) -> <Self as Mul>::Output {
-        Self {
-            re: self.re * rhs.re - self.im * rhs.im,
-            im: self.im * rhs.re + self.re * rhs.im,
-        }
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::Output::new(self.re - rhs.re, self.im - rhs.im)
+    }
+}
+
+// (a + i b) * (c + i d) == (a*c - b*d) + i (a*d + b*c)
+impl<T> Mul<Complex<T>> for Complex<T> 
+where
+    T: Clone + Mul<Output = T> + Add<Output = T> + Sub<Output = T> 
+{
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let re = self.re.clone() * rhs.re.clone() - self.im.clone() * rhs.im.clone();
+        let im = self.im * rhs.re + self.re * rhs.im;
+        Self::Output::new(re, im)
     }
 }
 
 /// TODO: Rerun Error Code if denominator == 0
-impl Div for Complex64 {
+// (a + i b) / (c + i d) == [(a + i b) * (c - i d)] / (c*c + d*d)
+//   == [(a*c + b*d) / (c*c + d*d)] + i [(b*c - a*d) / (c*c + d*d)]
+impl<T> Div for Complex<T> 
+where
+    T: Clone + Div<Output = T> + Mul<Output = T> + Add<Output = T> + Sub<Output = T> 
+{
     type Output = Self;
-    fn div(self, rhs: Self) -> <Self as Div>::Output {
-        let deno = rhs.re * rhs.re + rhs.im * rhs.im;
-        let re_tmp = self.re * rhs.re + self.im * rhs.im;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        let deno = rhs.re.clone() * rhs.re.clone() + rhs.im.clone() * rhs.im.clone(); // Denominator
+        let re_tmp = self.re.clone() * rhs.re.clone() + self.im.clone() * rhs.im.clone();
         let im_tmp = self.im * rhs.re - self.re * rhs.im;
-        Self {
-            re: re_tmp / deno,
-            im: im_tmp / deno,
-        }
+        Self::Output::new(re_tmp / deno.clone(), im_tmp / deno)
     }
 }
 
