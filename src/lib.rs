@@ -1,5 +1,4 @@
 use std::ops::{Add, Sub, Mul, Div};
-use std::f64::consts::PI;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Complex<T> {
